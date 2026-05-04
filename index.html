@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>逗點教室 日報產生器</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#eeece8;
+  --text:#1a1a1a;--text2:#666;--text3:#999;
+  --border:#e0ddd7;--border2:#ccc;
+  --ok-bg:#eaf3de;--ok-text:#3b6d11;--ok-border:#639922;
+  --ng-bg:#faeeda;--ng-text:#854f0b;--ng-border:#ba7517;
+  --info-bg:#e6f1fb;--info-text:#185fa5;--info-border:#378add;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1e1e1c;--bg2:#2a2a27;--bg3:#323230;
+    --text:#f0ede8;--text2:#aaa;--text3:#777;
+    --border:#3a3a36;--border2:#555;
+    --ok-bg:#27500a;--ok-text:#c0dd97;--ok-border:#639922;
+    --ng-bg:#633806;--ng-text:#fac775;--ng-border:#ba7517;
+    --info-bg:#0c447c;--info-text:#b5d4f4;--info-border:#378add;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;padding:1.5rem 1rem}
+.container{max-width:700px;margin:0 auto}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap}
+.top-bar h1{font-size:18px;font-weight:600;color:var(--text);flex:1}
+.top-bar input[type=date]{padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:14px;color:var(--text);background:var(--bg);font-family:inherit}
+.section{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:10px}
+.sec-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+.school-row{padding:8px 0;border-bottom:0.5px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.school-row:last-child{border-bottom:none;padding-bottom:0}
+.school-row:first-child{padding-top:0}
+.sname{font-size:14px;font-weight:500;color:var(--text);min-width:108px}
+.at-wrap{display:flex}
+.at-btn{padding:5px 13px;font-size:12px;border:0.5px solid var(--border2);cursor:pointer;background:var(--bg2);color:var(--text2);font-family:inherit;transition:all 0.1s}
+.at-btn:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+.at-btn:last-child{border-radius:0 var(--radius) var(--radius) 0;border-left:none}
+.at-btn.ok{background:var(--ok-bg);color:var(--ok-text);border-color:var(--ok-border)}
+.at-btn.ng{background:var(--ng-bg);color:var(--ng-text);border-color:var(--ng-border)}
+.alert-box{width:100%;margin-top:6px;padding:8px 10px;background:var(--bg2);border-radius:var(--radius);border-left:3px solid var(--ng-border)}
+textarea,input[type=text]{padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--bg);font-family:inherit}
+textarea{width:100%;resize:vertical;min-height:52px}
+textarea:focus,input[type=text]:focus{outline:none;border-color:var(--info-border)}
+.nlabel{font-size:13px;color:var(--text2);white-space:nowrap}
+.ni{width:64px;text-align:center}
+.ni.wide{width:80px}
+/* 詢班 */
+.inq-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);flex-wrap:wrap}
+.inq-row:last-child{border-bottom:none;padding-bottom:0}
+.inq-row:first-child{padding-top:0}
+/* 人數科次 */
+.hc-block{padding:8px 0;border-bottom:0.5px solid var(--border)}
+.hc-block:last-child{border-bottom:none;padding-bottom:0}
+.hc-block:first-child{padding-top:0}
+.hc-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hc-delta{margin-top:8px;padding:8px 10px;background:var(--bg2);border-radius:var(--radius);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sign-sel{padding:5px 6px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--bg);font-family:inherit;cursor:pointer;width:48px;text-align:center}
+.spinner{width:72px;text-align:center;padding:6px 8px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:14px;font-weight:500;color:var(--text);background:var(--bg);font-family:inherit;-moz-appearance:textfield}
+.spinner::-webkit-inner-spin-button,.spinner::-webkit-outer-spin-button{opacity:1;height:28px}
+/* 繳費 */
+.fee-block{padding:8px 0;border-bottom:0.5px solid var(--border)}
+.fee-block:last-child{border-bottom:none;padding-bottom:0}
+.fee-block:first-child{padding-top:0}
+.fee-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.fee-slabel{font-size:14px;font-weight:500;color:var(--text);min-width:108px}
+.check-sm{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer}
+.check-sm input{accent-color:var(--info-border);width:13px;height:13px;cursor:pointer}
+.fee-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.fee-row input.fn{flex:1;min-width:0}
+.frac{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.frac input{width:54px;text-align:center}
+.pct-badge{font-size:12px;color:var(--text2);min-width:42px;text-align:right;white-space:nowrap}
+.del-btn{width:26px;height:26px;border:0.5px solid var(--border);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text2);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;line-height:1}
+.del-btn:hover{background:#fee;color:#c0392b;border-color:#e74c3c}
+.add-btn{padding:5px 13px;border:0.5px dashed var(--border2);border-radius:var(--radius);font-size:12px;background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;margin-top:2px}
+.add-btn:hover{background:var(--bg2)}
+/* 行銷 */
+.mkt-block{padding:8px 0;border-bottom:0.5px solid var(--border)}
+.mkt-block:last-child{border-bottom:none;padding-bottom:0}
+.mkt-block:first-child{padding-top:0}
+.mkt-hdr{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.mkt-hdr span{font-size:14px;font-weight:500;color:var(--text);min-width:108px}
+.mkt-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.mkt-row input{flex:1}
+.pub-check{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);white-space:nowrap;cursor:pointer;flex-shrink:0}
+.pub-check input{accent-color:#1d9e75;width:13px;height:13px;cursor:pointer}
+.pub-check.pub{color:var(--ok-text);font-weight:500}
+/* 限動 */
+.ls-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.ls-row:last-child{border-bottom:none;padding-bottom:0}
+.ls-row:first-child{padding-top:0}
+/* actions */
+.actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap;padding-bottom:2rem}
+.btn-gen{padding:10px 24px;background:var(--info-bg);color:var(--info-text);border:0.5px solid var(--info-border);border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-gen:hover{opacity:0.85}
+.btn-save{padding:10px 18px;background:var(--bg2);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);font-size:14px;cursor:pointer;font-family:inherit}
+.btn-save:hover{background:var(--bg3)}
+.save-ok{font-size:12px;color:var(--ok-text);font-weight:500}
+/* output */
+.output-wrap{margin-top:1rem;display:none}
+.output-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.output{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;font-size:13px;line-height:2.1;white-space:pre-wrap;font-family:'Menlo','Consolas','SF Mono',monospace;color:var(--text)}
+.copy-btn{margin-top:10px;padding:8px 18px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text);cursor:pointer;font-family:inherit}
+.copy-btn:hover{background:var(--bg2)}
+.copy-btn.copied{color:var(--ok-text);border-color:var(--ok-border)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-bar">
+    <h1>逗點教室 日報產生器</h1>
+    <input type="date" id="rdate">
+  </div>
+
+  <div class="section"><div class="sec-title">異常狀況</div><div id="s-abnormal"></div></div>
+  <div class="section"><div class="sec-title">缺課補課</div><div id="s-absent"></div></div>
+  <div class="section"><div class="sec-title">詢班結案</div><div id="s-inquiry"></div></div>
+  <div class="section"><div class="sec-title">人數科次</div><div id="s-headcount"></div></div>
+  <div class="section"><div class="sec-title">報名繳費</div><div id="s-fee"></div></div>
+  <div class="section"><div class="sec-title">社群健檢</div><div id="s-community"></div></div>
+  <div class="section"><div class="sec-title">客訴回報</div><div id="s-complaint"></div></div>
+  <div class="section"><div class="sec-title">行銷排程</div><div id="s-mkt"></div></div>
+  <div class="section"><div class="sec-title">每日限動</div><div id="s-limitstory"></div></div>
+
+  <div class="actions">
+    <button class="btn-gen" onclick="gen()">產出日報文字</button>
+    <button class="btn-save" onclick="saveAll()">儲存設定</button>
+    <span class="save-ok" id="toast" style="display:none">已儲存 ✓</span>
+  </div>
+
+  <div class="output-wrap" id="output-wrap">
+    <div class="output-label">日報輸出</div>
+    <div class="output" id="output"></div>
+    <button class="copy-btn" id="cbtn" onclick="copyOut()">複製全部</button>
+  </div>
+</div>
+
+<script>
+const SC=[
+  {id:'dayuan', name:'大園參天校', label:'參天校'},
+  {id:'qingpu', name:'青埔旭日校', label:'旭日校'},
+  {id:'yuanzhong',name:'園中方舟校', label:'方舟校'},
+  {id:'zhongli', name:'中壢心夢想校',label:'心夢想校'},
+  {id:'shengda', name:'青埔升大校', label:'升大校'}
+];
+const SK='dianreport_v5';
+
+function ld(){try{return JSON.parse(localStorage.getItem(SK)||'{}')}catch{return{}}}
+function sv(d){localStorage.setItem(SK,JSON.stringify(d))}
+function def(){return{
+  abnormal:false, abnormal_note:'',
+  absent:false,   absent_note:'',
+  inquiry_count:'',
+  headcount:'',   subjects:'',
+  delta_p:'',delta_p_sign:'-',delta_s:'',delta_s_sign:'-',delta_reason:'',
+  community:false,community_note:'',
+  complaint:'0',
+  fee_none:false,
+  fees:[{name:'',paid:'',total:''}],
+  mkt:[{name:'',published:false,unpub_reason:''}],
+  limitstory:true
+}}
+function gd(){let d=ld();SC.forEach(s=>{if(!d[s.id])d[s.id]=def()});return d}
+
+// ── field setters ──
+function tog(sid,field,val){collectAll();let d=gd();d[sid][field]=val;sv(d);rAll()}
+function setLS(sid,val){let d=gd();d[sid].limitstory=val;sv(d);rLimitstory()}
+function ni(sid,f,v){let d=gd();d[sid][f]=v;sv(d)}
+
+// ── fee ──
+function feeNone(sid,v){collectAll();let d=gd();d[sid].fee_none=v;sv(d);rFee()}
+function addFee(sid){collectAll();let d=gd();d[sid].fees.push({name:'',paid:'',total:''});sv(d);rFee()}
+function delFee(sid,i){collectAll();let d=gd();d[sid].fees.splice(i,1);if(!d[sid].fees.length)d[sid].fees=[{name:'',paid:'',total:''}];sv(d);rFee()}
+function updFee(sid,i,f,v){
+  let d=gd();if(!d[sid].fees[i])d[sid].fees[i]={};d[sid].fees[i][f]=v;sv(d);
+  const el=document.getElementById('pct-'+sid+'-'+i);
+  if(el){const p=parseInt(d[sid].fees[i].paid)||0,t=parseInt(d[sid].fees[i].total)||0;el.textContent=t>0?Math.round(p/t*100)+'%':'–'}
+}
+
+// ── mkt ──
+function addMkt(sid){collectAll();let d=gd();d[sid].mkt.push({name:'',published:false});sv(d);rMkt()}
+function delMkt(sid,i){collectAll();let d=gd();d[sid].mkt.splice(i,1);if(!d[sid].mkt.length)d[sid].mkt=[{name:'',published:false}];sv(d);rMkt()}
+function mktName(sid,i,v){let d=gd();if(!d[sid].mkt[i])d[sid].mkt[i]={};d[sid].mkt[i].name=v;sv(d)}
+function mktUnpub(sid,i,v){let d=gd();if(!d[sid].mkt[i])d[sid].mkt[i]={};d[sid].mkt[i].unpub_reason=v;sv(d)}
+function mktPub(sid,i,v){
+  collectAll();
+  let d=gd();if(!d[sid].mkt[i])d[sid].mkt[i]={};d[sid].mkt[i].published=v;sv(d);rMkt();
+}
+
+// ── collect all live inputs ──
+function collectAll(){
+  let d=gd();
+  SC.forEach(s=>{
+    ['inquiry_count','headcount','subjects','delta_p','delta_s','delta_reason','complaint'].forEach(f=>{
+      const el=document.getElementById(f+'-'+s.id);if(el)d[s.id][f]=el.value;
+    });
+    // mkt unpub reasons
+    document.querySelectorAll('[data-upsid="'+s.id+'"]').forEach(el=>{
+      const i=parseInt(el.dataset.upi);
+      if(!d[s.id].mkt[i])d[s.id].mkt[i]={};
+      d[s.id].mkt[i].unpub_reason=el.value;
+    });
+    // abnormal notes
+    ['abnormal_note','absent_note','community_note'].forEach(f=>{
+      const el=document.getElementById(f+'-'+s.id);if(el)d[s.id][f]=el.value;
+    });
+    // fees
+    document.querySelectorAll('[data-fsid="'+s.id+'"]').forEach(el=>{
+      const i=parseInt(el.dataset.fi),f=el.dataset.ff;
+      if(!d[s.id].fees[i])d[s.id].fees[i]={};
+      d[s.id].fees[i][f]=el.value;
+    });
+    // mkt names
+    document.querySelectorAll('[data-msid="'+s.id+'"]').forEach(el=>{
+      const i=parseInt(el.dataset.mi);
+      if(!d[s.id].mkt[i])d[s.id].mkt[i]={};
+      d[s.id].mkt[i].name=el.value;
+    });
+  });
+  sv(d);
+}
+
+// ── render helpers ──
+function rAlert(cid,field,nf){
+  const d=gd();
+  document.getElementById(cid).innerHTML=SC.map(s=>{
+    const ok=!d[s.id][field];
+    return`<div class="school-row">
+      <span class="sname">${s.name}</span>
+      <div class="at-wrap">
+        <button class="at-btn${ok?' ok':''}" onclick="tog('${s.id}','${field}',false)">無異常</button>
+        <button class="at-btn${!ok?' ng':''}" onclick="tog('${s.id}','${field}',true)">有異常</button>
+      </div>
+      ${!ok?`<div class="alert-box"><textarea id="${nf}-${s.id}" placeholder="說明異常內容...">${d[s.id][nf]||''}</textarea></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function rInquiry(){
+  const d=gd();
+  document.getElementById('s-inquiry').innerHTML=SC.map(s=>`
+    <div class="inq-row">
+      <span class="sname">${s.name}</span>
+      <span class="nlabel" style="margin-left:auto">詢班確認中</span>
+      <input type="text" class="ni" id="inquiry_count-${s.id}" value="${d[s.id].inquiry_count||''}" placeholder="0" oninput="ni('${s.id}','inquiry_count',this.value)">
+      <span class="nlabel">則</span>
+    </div>`).join('');
+}
+
+function rHeadcount(){
+  const d=gd();
+  document.getElementById('s-headcount').innerHTML=SC.map(s=>{
+    const sd=d[s.id];
+    // delta_p and delta_s are now signed integers stored as strings, e.g. "3" or "-5"
+    const dp=sd.delta_p||'0';
+    const ds2=sd.delta_s||'0';
+    return`<div class="hc-block">
+      <div class="hc-main">
+        <span class="sname">${s.label}</span>
+        <input type="text" class="ni wide" id="headcount-${s.id}" value="${sd.headcount||''}" placeholder="人數" oninput="ni('${s.id}','headcount',this.value)">
+        <span class="nlabel">人 ／</span>
+        <input type="text" class="ni wide" id="subjects-${s.id}" value="${sd.subjects||''}" placeholder="科次" oninput="ni('${s.id}','subjects',this.value)">
+        <span class="nlabel">科</span>
+      </div>
+      <div class="hc-delta">
+        <span class="nlabel" style="white-space:nowrap">昨日異動</span>
+        <input type="number" class="spinner" id="delta_p-${s.id}" value="${dp}" oninput="ni('${s.id}','delta_p',this.value)">
+        <span class="nlabel">人 ／</span>
+        <input type="number" class="spinner" id="delta_s-${s.id}" value="${ds2}" oninput="ni('${s.id}','delta_s',this.value)">
+        <span class="nlabel">科</span>
+        <input type="text" id="delta_reason-${s.id}" value="${sd.delta_reason||''}" placeholder="異動原因（留空代表無異動）" style="flex:1;min-width:100px" oninput="ni('${s.id}','delta_reason',this.value)">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function rFee(){
+  const d=gd();
+  document.getElementById('s-fee').innerHTML=SC.map(s=>{
+    const sd=d[s.id];
+    let fhtml='';
+    if(!sd.fee_none){
+      fhtml=(sd.fees||[]).map((f,i)=>{
+        const p=parseInt(f.paid)||0,t=parseInt(f.total)||0;
+        const pct=t>0?Math.round(p/t*100)+'%':'–';
+        return`<div class="fee-row">
+          <input type="text" class="fn" placeholder="繳費項目（如：4-6月國一）" value="${f.name||''}" data-fsid="${s.id}" data-fi="${i}" data-ff="name" oninput="updFee('${s.id}',${i},'name',this.value)">
+          <div class="frac">
+            <input type="text" placeholder="已繳" value="${f.paid||''}" data-fsid="${s.id}" data-fi="${i}" data-ff="paid" oninput="updFee('${s.id}',${i},'paid',this.value)">
+            <span style="font-size:13px;color:var(--text2)">/</span>
+            <input type="text" placeholder="總數" value="${f.total||''}" data-fsid="${s.id}" data-fi="${i}" data-ff="total" oninput="updFee('${s.id}',${i},'total',this.value)">
+          </div>
+          <span class="pct-badge" id="pct-${s.id}-${i}">${pct}</span>
+          <button class="del-btn" onclick="delFee('${s.id}',${i})">×</button>
+        </div>`;
+      }).join('');
+    }
+    return`<div class="fee-block">
+      <div class="fee-hdr">
+        <span class="fee-slabel">${s.name}</span>
+        <label class="check-sm"><input type="checkbox" ${sd.fee_none?'checked':''} onchange="feeNone('${s.id}',this.checked)"> 無待繳費項目</label>
+      </div>
+      ${fhtml}
+      ${!sd.fee_none?`<button class="add-btn" onclick="addFee('${s.id}')">＋ 新增項目</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+function rComplaint(){
+  const d=gd();
+  document.getElementById('s-complaint').innerHTML=SC.map(s=>`
+    <div class="school-row">
+      <span class="sname">${s.name}</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <input type="text" class="ni" id="complaint-${s.id}" value="${d[s.id].complaint||'0'}" oninput="ni('${s.id}','complaint',this.value)">
+        <span class="nlabel">客訴</span>
+      </div>
+    </div>`).join('');
+}
+
+function rMkt(){
+  const d=gd();
+  document.getElementById('s-mkt').innerHTML=SC.map(s=>{
+    const mhtml=(d[s.id].mkt||[]).map((m,i)=>`
+      <div class="mkt-item" id="mitem-${s.id}-${i}">
+        <div class="mkt-row">
+          <input type="text" placeholder="貼文名稱" value="${m.name||''}" data-msid="${s.id}" data-mi="${i}" oninput="mktName('${s.id}',${i},this.value)">
+          <label class="pub-check${m.published?' pub':''}" id="mpub-${s.id}-${i}">
+            <input type="checkbox" ${m.published?'checked':''} onchange="mktPub('${s.id}',${i},this.checked)"> 已發布
+          </label>
+          <button class="del-btn" onclick="delMkt('${s.id}',${i})">×</button>
+        </div>
+        ${!m.published?`<div class="alert-box" style="margin-top:4px"><input type="text" style="width:100%" placeholder="未發出原因..." value="${m.unpub_reason||''}" data-upsid="${s.id}" data-upi="${i}" oninput="mktUnpub('${s.id}',${i},this.value)"></div>`:''}
+      </div>`).join('');
+    return`<div class="mkt-block">
+      <div class="mkt-hdr">
+        <span>${s.name}</span>
+        <button class="add-btn" onclick="addMkt('${s.id}')">＋ 新增貼文</button>
+      </div>
+      ${mhtml}
+    </div>`;
+  }).join('');
+}
+
+function rLimitstory(){
+  const d=gd();
+  document.getElementById('s-limitstory').innerHTML=SC.map(s=>`
+    <div class="ls-row">
+      <span class="sname">${s.name}</span>
+      <div class="at-wrap" style="margin-left:auto">
+        <button class="at-btn${d[s.id].limitstory?' ok':''}" onclick="setLS('${s.id}',true)">已發</button>
+        <button class="at-btn${!d[s.id].limitstory?' ng':''}" onclick="setLS('${s.id}',false)">未發</button>
+      </div>
+    </div>`).join('');
+}
+
+function rAll(){
+  rAlert('s-abnormal','abnormal','abnormal_note');
+  rAlert('s-absent','absent','absent_note');
+  rInquiry();
+  rHeadcount();
+  rFee();
+  rAlert('s-community','community','community_note');
+  rComplaint();
+  rMkt();
+  rLimitstory();
+}
+
+function saveAll(){
+  collectAll();
+  const t=document.getElementById('toast');
+  t.style.display='inline';
+  setTimeout(()=>t.style.display='none',2000);
+}
+
+function gen(){
+  collectAll();
+  const d=gd();
+  const dv=document.getElementById('rdate').value;
+  let ds='';
+  if(dv){
+    const dt=new Date(dv+'T00:00:00');
+    const m=dt.getMonth()+1,day=dt.getDate(),wd=['日','一','二','三','四','五','六'][dt.getDay()];
+    ds=`${m.toString().padStart(2,'0')}/${day.toString().padStart(2,'0')}（${wd}）`;
+  }
+  let out='';
+  SC.forEach(sc=>{
+    const s=d[sc.id];
+    out+=`📅 ${sc.name}\n`;
+    out+=`• 異常狀況：${s.abnormal?'有異常'+(s.abnormal_note?'，'+s.abnormal_note:''):'無'}\n`;
+    out+=`【缺課補課】\n• ${s.absent?'有異常'+(s.absent_note?'，'+s.absent_note:''):'無異常'}\n`;
+    out+=`【詢班結案】\n• 無異常，${s.inquiry_count||'0'} 則詢班確認中\n`;
+    out+=`【人數科次】\n• ${sc.label}：${s.headcount||'-'} 人 ／ ${s.subjects||'-'} 科\n`;
+    const dp=parseInt(s.delta_p)||0;
+    const ds2=parseInt(s.delta_s)||0;
+    if(dp!==0||ds2!==0||s.delta_reason){
+      const pStr=(dp>0?'＋':dp<0?'－':'')+Math.abs(dp);
+      const sStr=(ds2>0?'＋':ds2<0?'－':'')+Math.abs(ds2);
+      out+=`• 昨日異動：${pStr} 人 ／ ${sStr} 科${s.delta_reason?'，'+s.delta_reason:''}\n`;
+    }
+    out+=`【報名繳費】\n`;
+    if(s.fee_none){
+      out+=`• 無待繳費項目\n`;
+    } else {
+      (s.fees||[]).forEach(f=>{
+        if(!f.name)return;
+        const p=parseInt(f.paid)||0,t=parseInt(f.total)||0;
+        const pct=t>0?Math.round(p/t*100):0;
+        out+=`• ${f.name}：${p} ／ ${t}（ ${pct} ％ ）\n`;
+      });
+    }
+    out+=`【社群健檢】\n• ${s.community?'有異常'+(s.community_note?'，'+s.community_note:''):'無異常'}\n`;
+    out+=`【客訴回報】\n• ${s.complaint||'0'} 客訴\n`;
+    out+=`【行銷排程】\n`;
+    (s.mkt||[]).forEach(m=>{
+      if(!m.name)return;
+      out+=`• 預排貼文：${m.name}${m.published?'✅':'❌'}`;
+      if(!m.published&&m.unpub_reason)out+=`，${m.unpub_reason}`;
+      out+='\n';
+    });
+    out+=`• 每日限動：${s.limitstory?'✅':'❌'}\n\n`;
+  });
+
+  document.getElementById('output').textContent=out.trim();
+  document.getElementById('output-wrap').style.display='block';
+  const cb=document.getElementById('cbtn');
+  cb.textContent='複製全部';
+  cb.className='copy-btn';
+  document.getElementById('output-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyOut(){
+  navigator.clipboard.writeText(document.getElementById('output').textContent).then(()=>{
+    const cb=document.getElementById('cbtn');
+    cb.textContent='已複製 ✓';
+    cb.className='copy-btn copied';
+    setTimeout(()=>{cb.textContent='複製全部';cb.className='copy-btn'},2500);
+  });
+}
+
+// ── init ──
+document.getElementById('rdate').value=new Date().toISOString().split('T')[0];
+rAll();
+</script>
+</body>
+</html>
